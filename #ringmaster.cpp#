@@ -45,20 +45,49 @@ int main(int argc, char *argv[]) {
   const char *hostname = NULL;
   struct addrinfo hints;
   struct addrinfo *host_addrinfo;
-  int socket_fd;
+  int master_fd;
 
   hints.ai_flags = AI_PASSIVE;
   hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
 
-  int status = getaddrinfo(hostname, port_num, &hints, &host_addrinfo);
-  if (status != 0) {
-    cerr << "Can not get addrinfo for localhost!" << endl;
+  int getaddrinfo_status =
+      getaddrinfo(hostname, port_num, &hints, &host_addrinfo);
+  if (getaddrinfo_status != 0) {
+    cerr << "Can not get addrinfo for localhost!" << hostname << ":" << port_num
+         << endl;
     exit(EXIT_FAILURE);
   }
 
-  socket_fd = socket(host_addrinfo->ai_family, host_addrinfo->ai_socktype,
+  master_fd = socket(host_addrinfo->ai_family, host_addrinfo->ai_socktype,
                      host_addrinfo->ai_protocol);
+  if (master_fd < 0) {
+    cerr << "Can not create master socket on " << master_fd << " on" << hostname
+         << ":" << port_num << endl;
+    exit(EXIT_FAILURE);
+  }
 
-  
+  int flag = 1;
+  int setsockopt_status =
+      setsockopt(master_fd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(int));
+  if (setsockopt_status != 0) {
+    cerr << "Set Sockopt Fails" << endl;
+    exit(EXIT_FAILURE);
+  }
+
+  int bindStatus =
+      bind(master_fd, host_addrinfo->ai_addr, host_addrinfo->ai_addrlen);
+
+  if (bindStatus != 0) {
+    cerr << "Can not bind " << master_fd << endl;
+    exit(EXIT_FAILURE);
+  }
+
+  int listenStatus = listen(master_fd, 100);
+  if (listenStatus != 0) {
+    cerr << "Error: Can not listen on " << hostname << ":" << port_num << endl;
+    exit(EXIT_FAILURE);
+  }
+  cout << "Waiting for connection on port " << port_num << endl;
+    
 }
