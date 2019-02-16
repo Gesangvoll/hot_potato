@@ -59,4 +59,6 @@ int main(int argc, char *argv[]) {
 
   socket_fd = socket(host_addrinfo->ai_family, host_addrinfo->ai_socktype,
                      host_addrinfo->ai_protocol);
+
+  
 }
