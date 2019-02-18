@@ -1,3 +1,4 @@
+#include <arpa/inet.h>
 #include <cstring>
 #include <iostream>
 #include <netdb.h>
@@ -10,6 +11,7 @@
 #define MAX_HOPS 512
 
 typedef struct potato_t {
+  int num_hops;
   int hops_to_go;
   char trace[MAX_HOPS];
 } potato;
@@ -21,6 +23,6 @@ typedef struct player_t {
   struct sockaddr left_addr;
   struct sockaddr right_addr;
   int num_players;
-  char port[6];
-  char right_port[6]; // Players connect towards right
+  char listen_port[6];
+  char right_player_listen_port[6]; // Players connect towards right
 } player;

@@ -1,12 +1,4 @@
 #include "potato.hpp"
-#include <cstring>
-#include <iostream>
-#include <netdb.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <unistd.h>
 
 using namespace std;
 
@@ -37,25 +29,25 @@ void input_format_check(int argc, char *argv[]) {
 
 int main(int argc, char *argv[]) {
   input_format_check(argc, argv);
-
+  potato shutdown_msg;
   const char *port_num = argv[1];
   int num_players = atoi(argv[2]);
   int num_hops = atoi(argv[3]);
-
+  cout << port_num << endl;
   const char *hostname = NULL;
   struct addrinfo hints;
   struct addrinfo *host_addrinfo;
   int master_fd;
+  memset(&hints, 0, sizeof(hints));
 
   hints.ai_flags = AI_PASSIVE;
   hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
-
   int getaddrinfo_status =
       getaddrinfo(hostname, port_num, &hints, &host_addrinfo);
   if (getaddrinfo_status != 0) {
-    cerr << "Can not get addrinfo for localhost!" << hostname << ":" << port_num
-         << endl;
+    cerr << "Can not get addrinfo for localhost!"
+         << ":" << port_num << endl;
     exit(EXIT_FAILURE);
   }
 
@@ -110,10 +102,12 @@ int main(int argc, char *argv[]) {
         recv(players[i].connected_socket_on_master, &cur_player_port_num,
              sizeof(cur_player_port_num), 0);
     if (recv_size == -1) {
-      cerr << "Error: recv() could not recv player # " << i << endl;
+      cerr << "Error: recv() could not recv player # " << i << "'s port number"
+           << endl;
       exit(EXIT_FAILURE);
     }
-    memcpy(players[i].port, cur_player_port_num, sizeof(cur_player_port_num));
+    memcpy(players[i].listen_port, cur_player_port_num,
+           sizeof(cur_player_port_num));
   }
 
   /***Setup players,tell players their id and neighbors,then recv response***/
@@ -127,20 +121,20 @@ int main(int argc, char *argv[]) {
     }
     if (i == num_players - 1) {
       players[i].right_addr = players[0].player_addr;
-      memcpy(players[i].right_port, players[i].port, 6);
+      memcpy(players[i].right_player_listen_port, players[i].listen_port, 6);
     } else {
       players[i].right_addr = players[i + 1].player_addr;
-      memcpy(players[i].right_port, players[i].port, 6);
+      memcpy(players[i].right_player_listen_port, players[i].listen_port, 6);
     }
-    int sendStatus = send(players[i].connected_socket_on_master, &players[i],
-                          sizeof(player), 0);
+    ssize_t sendStatus = send(players[i].connected_socket_on_master,
+                              &players[i], sizeof(player), 0);
     if (sendStatus == -1) {
       cerr << "Error: Could not send setup info to player #: " << i << endl;
       exit(EXIT_FAILURE);
     }
     int response_player_id;
-    int recvStatus = recv(players[i].connected_socket_on_master,
-                          &response_player_id, sizeof(int), MSG_WAITALL);
+    ssize_t recvStatus = recv(players[i].connected_socket_on_master,
+                              &response_player_id, sizeof(int), MSG_WAITALL);
     if (recvStatus == -1) {
       cerr << "Error: Could not recv response from player # " << i << endl;
       exit(EXIT_FAILURE);
@@ -155,10 +149,12 @@ int main(int argc, char *argv[]) {
 
   /**If num_hops is initially 0, tell players to shutdown and then shutdown*/
   if (num_hops == 0) {
-    char shut_down[] = "shutdown";
+    shutdown_msg.hops_to_go = -1;
+    strcpy(shutdown_msg.trace, "shutdown");
+
     for (int i = 0; i < num_players; i++) {
-      int sendStatus = send(players[i].connected_socket_on_master, shut_down,
-                            sizeof(shut_down), 0);
+      ssize_t sendStatus = send(players[i].connected_socket_on_master,
+                                &shutdown_msg, sizeof(shutdown_msg), 0);
       if (sendStatus == -1) {
         cerr << "Error: Could not send shutdown msg to player #: " << i << endl;
         exit(EXIT_FAILURE);
@@ -173,11 +169,12 @@ int main(int argc, char *argv[]) {
   srand((unsigned)time(NULL));
   int starter_player = rand() % num_players;
   potato potato;
+  potato.num_hops = num_hops;
   potato.hops_to_go = num_hops;
   cout << "Ready to start the game, sending potato to player " << starter_player
        << endl;
-  int sendStatus = send(players[starter_player].connected_socket_on_master,
-                        &potato, sizeof(potato), 0);
+  ssize_t sendStatus = send(players[starter_player].connected_socket_on_master,
+                            &potato, sizeof(potato), 0);
   if (sendStatus == -1) {
     cerr << "Error: Could not send start game msg to starter player #: "
          << starter_player << endl;
@@ -199,8 +196,8 @@ int main(int argc, char *argv[]) {
 
   for (int i = 0; i < num_players; i++) {
     if (FD_ISSET(players[i].connected_socket_on_master, &player_fd_set)) {
-      int recvStatuc = recv(players[i].connected_socket_on_master, potato.trace,
-                            sizeof(potato.trace), 0);
+      ssize_t recvStatuc = recv(players[i].connected_socket_on_master,
+                                potato.trace, sizeof(potato.trace), 0);
       break;
     }
   }
@@ -215,10 +212,12 @@ int main(int argc, char *argv[]) {
   }
 
   /************************Game End. Shutdown Gracefully***********************/
-  char shut_down[] = "shutdown";
+  shutdown_msg.hops_to_go = -1;
+  strcpy(shutdown_msg.trace, "shutdown");
+
   for (int i = 0; i < num_players; i++) {
-    int sendStatus = send(players[i].connected_socket_on_master, shut_down,
-                          sizeof(shut_down), 0);
+    ssize_t sendStatus = send(players[i].connected_socket_on_master,
+                              &shutdown_msg, sizeof(shutdown_msg), 0);
     if (sendStatus == -1) {
       cerr << "Error: Could not send shutdown msg to player #: " << i << endl;
       exit(EXIT_FAILURE);
