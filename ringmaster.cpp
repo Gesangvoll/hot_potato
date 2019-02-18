@@ -12,19 +12,19 @@ using namespace std;
 
 void input_format_check(int argc, char *argv[]) {
   if (argc != 4) {
-    cerr << "Wrong Format!\n" << endl;
+    cerr << "Wrong Format!" << endl;
     exit(EXIT_FAILURE);
   }
 
   int port_num = atoi(argv[1]);
   if (port_num <= 1024 || port_num >= 65535) {
-    cerr << "Unavailable Port Number!\n" << endl;
+    cerr << "Unavailable Port Number!" << endl;
     exit(EXIT_FAILURE);
   }
 
   int num_players = atoi(argv[2]);
   if (num_players <= 1) {
-    cerr << "Unavailable Number of Players!\n" << endl;
+    cerr << "Unavailable Number of Players!" << endl;
     exit(EXIT_FAILURE);
   }
 
