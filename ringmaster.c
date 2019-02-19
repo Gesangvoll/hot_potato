@@ -1,4 +1,4 @@
-#include "potato.hpp"
+#include "potato.h"
 
 void input_format_check(int argc, char *argv[]) {
   if (argc != 4) {

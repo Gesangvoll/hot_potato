@@ -1,13 +1,12 @@
-CC=g++
-CFLAGS= #-pedantic -Werror -Wall #-O3 -fPIC  -lpthread
-#CFLAGS=-ggdb3 -fPIC
+CC=gcc
+CFLAGS= -ggdb3 -pedantic -Werror -Wall -std=gnu++98
 
 all: ringmaster player
 
-ringmaster: ringmaster.cpp potato.hpp
+ringmaster: ringmaster.c potato.h
 	$(CC) $(CFLAGS) -o $@ ringmaster.cpp
 
-player: player.cpp potato.hpp
+player: player.c potato.h
 	$(CC) $(CFLAGS) -o $@ player.cpp
 
 clean:
