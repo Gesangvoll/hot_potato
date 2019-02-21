@@ -104,25 +104,31 @@ int main(int argc, char *argv[]) {
     }
     memcpy(players[i].listen_port, cur_player_port_num,
            sizeof(cur_player_port_num));
-    printf("Player # %d's listen port is %s\n", i, players[i].listen_port);
+    // printf("Player # %d's listen port is %s\n", i, players[i].listen_port);
   }
 
   /***Setup players,tell players their id and neighbors,then recv response***/
+  printf("Before for loop\n");
   for (int i = 0; i < num_players; i++) {
     players[i].id = i;
     players[i].num_players = num_players;
+    // printf("num_players is %d\n", num_players);
     if (i == 0) {
       players[i].left_addr = players[num_players - 1].player_addr;
+
     } else {
       players[i].left_addr = players[i - 1].player_addr;
     }
+    // printf("before last player setup\n");
     if (i == num_players - 1) {
       players[i].right_addr = players[0].player_addr;
-      memcpy(players[i].right_player_listen_port, players[i].listen_port, 6);
+      memcpy(players[i].right_player_listen_port, players[0].listen_port, 6);
     } else {
       players[i].right_addr = players[i + 1].player_addr;
-      memcpy(players[i].right_player_listen_port, players[i].listen_port, 6);
+      memcpy(players[i].right_player_listen_port, players[i + 1].listen_port,
+             6);
     }
+    // printf("'Sending Player # %d's setup info\n", i);
     ssize_t sendStatus = send(players[i].connected_socket_on_master,
                               &players[i], sizeof(players[i]), 0);
     if (sendStatus == -1) {
@@ -158,6 +164,7 @@ int main(int argc, char *argv[]) {
       }
       close(players[i].connected_socket_on_master);
     }
+    // printf("Im shutdown at first!\n");
     close(master_fd);
     exit(EXIT_SUCCESS);
   }
@@ -168,8 +175,9 @@ int main(int argc, char *argv[]) {
   potato potato;
   potato.num_hops = num_hops;
   potato.hops_to_go = num_hops;
-  printf("Ready to start the game, sending potato to player # %d",
-         starter_player);
+  // printf("Start the game, potato num hops: %d, hops to go :
+  // %d\n",potato.num_hops, potato.hops_to_go); printf("Ready to start the game,
+  // sending potato to player # %d\n",starter_player);
   ssize_t sendStatus = send(players[starter_player].connected_socket_on_master,
                             &potato, sizeof(potato), 0);
   if (sendStatus == -1) {
@@ -180,40 +188,54 @@ int main(int argc, char *argv[]) {
 
   /****************************Select()***********************************/
   fd_set player_fd_set;
-  FD_ZERO(&player_fd_set);
-  int max_fd = players[0].connected_socket_on_master;
-  for (int i = 0; i < num_players; i++) {
-    FD_SET(players[i].connected_socket_on_master, &player_fd_set);
-    if (players[i].connected_socket_on_master > max_fd) {
-      max_fd = players[i].connected_socket_on_master;
-    }
-  }
-
-  select(max_fd + 1, &player_fd_set, NULL, NULL, NULL);
-
-  for (int i = 0; i < num_players; i++) {
-    if (FD_ISSET(players[i].connected_socket_on_master, &player_fd_set)) {
-      ssize_t recvStatus = recv(players[i].connected_socket_on_master,
-                                potato.trace, sizeof(potato.trace), 0);
-      if (recvStatus == -1) {
-        printf("Error: Could not recv final potato from player # %d\n", i);
-        exit(EXIT_FAILURE);
+  while (1) {
+    int flag = 0;
+    FD_ZERO(&player_fd_set);
+    int max_fd = players[0].connected_socket_on_master;
+    for (int i = 0; i < num_players; i++) {
+      FD_SET(players[i].connected_socket_on_master, &player_fd_set);
+      if (players[i].connected_socket_on_master > max_fd) {
+        max_fd = players[i].connected_socket_on_master;
       }
+    }
+
+    if (select(max_fd + 1, &player_fd_set, NULL, NULL, NULL) > 0) {
+
+      for (int i = 0; i < num_players; i++) {
+        // printf("Check fd # %d\n", i);
+        if (FD_ISSET(players[i].connected_socket_on_master, &player_fd_set)) {
+          // printf("Coming from player # %d\n", i);
+          ssize_t recvStatus = recv(players[i].connected_socket_on_master,
+                                    potato.trace, sizeof(potato.trace), 0);
+          // printf("Potato trace: %ss\n", potato.trace);
+          // printf("trace len: %lu\n", strlen(potato.trace));
+          if (recvStatus == -1) {
+            printf("Error: Could not recv final potato from player # %d\n", i);
+            exit(EXIT_FAILURE);
+          }
+          if (strlen(potato.trace) - 1 == num_hops) {
+            // printf("Potato trace: %s\n", potato.trace);
+            flag = 1;
+          }
+        }
+      }
+    }
+    if (flag == 1) {
       break;
     }
   }
-
   printf("Trace of Potato:\n");
   for (int i = 0; i < num_hops; i++) {
     if (i == num_hops - 1) {
-      printf("%d", potato.trace[i]);
+      printf("%c\n", potato.trace[i]);
     } else {
-      printf("%d,", potato.trace[i]);
+      printf("%c,", potato.trace[i]);
     }
   }
 
-  /************************Game End. Shutdown Gracefully***********************/
-  shutdown_msg.hops_to_go = -1;
+  /************************Game End. Shutdown
+   * Gracefully***********************/
+  shutdown_msg.hops_to_go = -2;
   strcpy(shutdown_msg.trace, "shutdown");
 
   for (int i = 0; i < num_players; i++) {
