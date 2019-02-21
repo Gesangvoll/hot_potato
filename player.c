@@ -98,25 +98,25 @@ int main(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  printf("Listen Port to Send char * is %s\n", player_listen_port);
+  // printf("Listen Port to Send char * is %s\n", player_listen_port);
 
   ssize_t sendStatus = send(to_master_fd, player_listen_port, 6, 0);
   if (sendStatus == -1) {
     printf("Can not send port number msg to master!\n");
     exit(EXIT_FAILURE);
   }
-  printf("Listen Port Sent\n");
+  // printf("Listen Port Sent\n");
   /*****************************Get Setup Info*****************************/
   player player_setup;
-  printf("Before Get Setup info....\n");
+  // printf("Before Get Setup info....\n");
   ssize_t recvStatus =
       recv(to_master_fd, &player_setup, sizeof(player_setup), MSG_WAITALL);
-  printf("GEt Setup INfo........\n");
+  // printf("GEt Setup INfo........\n");
   if (recvStatus == -1) {
     printf("Can not recv setup info from master\n");
     exit(EXIT_FAILURE);
   }
-  printf("Recv setup info succeed!\n");
+  // printf("Recv setup info succeed!\n");
 
   /**************************Tell Master Ready, Then Claim Connected**********/
   sendStatus = send(to_master_fd, (char *)&player_setup.id, 6, 0);
@@ -124,7 +124,7 @@ int main(int argc, char *argv[]) {
     printf("Can not send confirm msg to master!\n");
     exit(EXIT_FAILURE);
   }
-  printf("Connected as player # %d out of %d total players\n", player_setup.id,
+  printf("Connected as player %d out of %d total players\n", player_setup.id,
          player_setup.num_players);
 
   /*****************************Connect Right******************************/
@@ -137,8 +137,9 @@ int main(int argc, char *argv[]) {
   struct sockaddr_in *right_player_sockaddr =
       (struct sockaddr_in *)(&player_setup.right_addr);
   const char *right_player_name = inet_ntoa(right_player_sockaddr->sin_addr);
-  printf("Right player name and its listen port %s : %s\n", right_player_name,
-         player_setup.right_player_listen_port);
+  // printf("Right player name and its listen port %s : %s\n",
+  // right_player_name,
+  //       player_setup.right_player_listen_port);
   getaddrinfo_status =
       getaddrinfo(right_player_name, player_setup.right_player_listen_port,
                   &right_hints, &right_player_addrinfo);
@@ -161,10 +162,12 @@ int main(int argc, char *argv[]) {
     printf("Can not connect to right player!\n");
     exit(EXIT_FAILURE);
   }
-  printf("Connect to Right Succeed, %s : (right player listen port)%s\n",
-         right_player_name, player_setup.right_player_listen_port);
+  /* printf("Connect to Right Succeed, %s : (right player listen
+   * port)%s\n", */
+  /*        right_player_name, player_setup.right_player_listen_port); */
 
-  /****************************Accept Left*************************************/
+  /****************************Accept
+   * Left*************************************/
   struct sockaddr_storage left_player_sockaddr;
   socklen_t left_player_sockaddr_len = sizeof(left_player_sockaddr);
   int connected_listen_fd =
@@ -180,10 +183,12 @@ int main(int argc, char *argv[]) {
   inet_ntop(left_player_sockaddr_in->sin_family,
             &left_player_sockaddr_in->sin_addr.s_addr, to_print_name,
             sizeof(to_print_name));
-  printf("Accept left player's name and port %s : %d\n", to_print_name,
-         ntohs(left_player_sockaddr_in->sin_port));
+  /* printf("Accept left player's name and port %s : %d\n",
+   * to_print_name, */
+  /*        ntohs(left_player_sockaddr_in->sin_port)); */
 
-  /****************************Play the Game*********************************/
+  /****************************Play the
+   * Game*********************************/
   fd_set game_fd_set;
   FD_ZERO(&game_fd_set);
   FD_SET(to_master_fd, &game_fd_set);
@@ -209,12 +214,11 @@ int main(int argc, char *argv[]) {
     if (FD_ISSET(to_master_fd, &game_fd_set)) {
       coming_fd = to_master_fd;
       if (potato.hops_to_go == potato.num_hops) {
-        printf("Recv a potato from master! First or shutdown?\n");
+        // printf("Recv a potato from master! First or shutdown?\n");
       }
     } else if (FD_ISSET(connected_listen_fd, &game_fd_set)) {
       coming_fd = connected_listen_fd;
     } else if (FD_ISSET(connect_fd, &game_fd_set)) {
-      printf("WOWOOOW\n");
       coming_fd = connect_fd;
     } else {
       printf("Did not find any potato came!\n");
@@ -222,23 +226,24 @@ int main(int argc, char *argv[]) {
     }
     recvStatus = recv(coming_fd, &potato, sizeof(potato), MSG_WAITALL);
     if (coming_fd == to_master_fd) {
-      printf("From master: potato num_hops : %d, hops_to_go : %d\n",
-             potato.num_hops, potato.hops_to_go);
+      // printf("From master: potato num_hops : %d, hops_to_go : %d\n",
+      //      potato.num_hops, potato.hops_to_go);
     } else if (coming_fd == connect_fd) {
-      printf("Potato coming from right\n");
+      // printf("Potato coming from right\n");
     } else if (coming_fd == connected_listen_fd) {
-      printf("Potato coming from left\n");
+      // printf("Potato coming from left\n");
     }
     if (recvStatus == -1) {
       printf("Can not recv during game!\n");
       exit(EXIT_FAILURE);
     }
-    sleep(5);
+    sleep(1);
     if (potato.hops_to_go == -1 || potato.hops_to_go == -2) {
       break; // Shutdown
     }
-    printf("Appending trace! now %d\n", potato.num_hops - potato.hops_to_go);
-    printf("Append value %c ", player_setup.id + '0');
+    // printf("Appending trace! now %d\n", potato.num_hops -
+    // potato.hops_to_go); printf("Append value %c ", player_setup.id +
+    // '0');
     potato.trace[potato.num_hops - potato.hops_to_go] = player_setup.id + '0';
 
     potato.hops_to_go--;
@@ -274,7 +279,7 @@ int main(int argc, char *argv[]) {
         }
 
         sendStatus = send(connected_listen_fd, &potato, sizeof(potato), 0);
-        sleep(5);
+        sleep(1);
         if (sendStatus == -1) {
           printf("Can not send potato ro left!\n");
           ;

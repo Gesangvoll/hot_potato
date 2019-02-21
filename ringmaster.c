@@ -31,12 +31,15 @@ int main(int argc, char *argv[]) {
   const char *port_num = argv[1];
   const int num_players = atoi(argv[2]);
   int num_hops = atoi(argv[3]);
-  printf("%s", port_num);
   const char *hostname = NULL;
   struct addrinfo hints;
   struct addrinfo *host_addrinfo;
   int master_fd;
   memset(&hints, 0, sizeof(hints));
+
+  printf("Potato Ringmaster\n");
+  printf("Players = %d\n", num_players);
+  printf("Hops = %d\n", num_hops);
 
   hints.ai_flags = AI_PASSIVE;
   hints.ai_family = AF_UNSPEC;
@@ -77,7 +80,7 @@ int main(int argc, char *argv[]) {
     printf("Error: Can not listen on %s : %s\n", hostname, port_num);
     exit(EXIT_FAILURE);
   }
-  printf("Waiting for connection on port %s\n", port_num);
+  // printf("Waiting for connection on port %s\n", port_num);
 
   /*********************** Loop of accept()*********************************/
   player players[num_players];
@@ -92,6 +95,7 @@ int main(int argc, char *argv[]) {
       printf("I kept waiting for player # %d before flowers were dead!\n", i);
       exit(EXIT_FAILURE);
     }
+    printf("Player %d is ready to play\n", i);
 
     char cur_player_port_num[6];
     // player.cpp: 100
@@ -108,7 +112,7 @@ int main(int argc, char *argv[]) {
   }
 
   /***Setup players,tell players their id and neighbors,then recv response***/
-  printf("Before for loop\n");
+
   for (int i = 0; i < num_players; i++) {
     players[i].id = i;
     players[i].num_players = num_players;
@@ -143,9 +147,9 @@ int main(int argc, char *argv[]) {
       exit(EXIT_FAILURE);
     }
     if (response_player_id == players[i].id && players[i].id == i) {
-      printf("Player # %d is ready to play\n", i);
+
     } else {
-      printf("Error: player # %d response setup wrongly\n", i);
+      printf("Error: player %d response setup wrongly\n", i);
       exit(EXIT_FAILURE);
     }
   }
@@ -176,8 +180,9 @@ int main(int argc, char *argv[]) {
   potato.num_hops = num_hops;
   potato.hops_to_go = num_hops;
   // printf("Start the game, potato num hops: %d, hops to go :
-  // %d\n",potato.num_hops, potato.hops_to_go); printf("Ready to start the game,
-  // sending potato to player # %d\n",starter_player);
+  // %d\n",potato.num_hops, potato.hops_to_go);
+  printf("Ready to start the game, sending potato to player %d\n",
+         starter_player);
   ssize_t sendStatus = send(players[starter_player].connected_socket_on_master,
                             &potato, sizeof(potato), 0);
   if (sendStatus == -1) {
@@ -224,7 +229,7 @@ int main(int argc, char *argv[]) {
       break;
     }
   }
-  printf("Trace of Potato:\n");
+  printf("Trace of potato:\n");
   for (int i = 0; i < num_hops; i++) {
     if (i == num_hops - 1) {
       printf("%c\n", potato.trace[i]);
