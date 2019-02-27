@@ -14,6 +14,7 @@ void input_format_check(int argc, char *argv[]) {
 }
 
 int main(int argc, char *argv[]) {
+  srand(time(NULL));
   input_format_check(argc, argv);
   const char *master_hostname = argv[1];
   const char *master_port_num = argv[2];
@@ -201,8 +202,8 @@ int main(int argc, char *argv[]) {
   if (max_fd < connect_fd) {
     max_fd = connect_fd;
   }
-  srand((unsigned)time(NULL));
-  int direction;
+
+  int direction = rand() % 2;
   int coming_fd;
   potato potato;
   while (1) {
@@ -237,28 +238,28 @@ int main(int argc, char *argv[]) {
       printf("Can not recv during game!\n");
       exit(EXIT_FAILURE);
     }
-    sleep(1);
+    // sleep(1);
     if (potato.hops_to_go == -1 || potato.hops_to_go == -2) {
       break; // Shutdown
     }
-    // printf("Appending trace! now %d\n", potato.num_hops -
-    // potato.hops_to_go); printf("Append value %c ", player_setup.id +
-    // '0');
-    potato.trace[potato.num_hops - potato.hops_to_go] = player_setup.id + '0';
-
+    // printf("Appending trace! now %d\n", potato.num_hops - potato.hops_to_go);
+    // printf("Append value %d ", player_setup.id);
+    potato.trace[potato.num_hops - potato.hops_to_go] = player_setup.id;
+    potato.count++;
     potato.hops_to_go--;
-
+    // printf("Hops to go: %d\n", potato.hops_to_go);
+    direction = rand() % 2;
     if (potato.hops_to_go == 0) {
       printf("I'm it\n");
 
-      sendStatus = send(to_master_fd, potato.trace, sizeof(potato.trace),
+      sendStatus = send(to_master_fd, &potato, sizeof(potato),
                         0); // Game End
       if (sendStatus == -1) {
         printf("Can not send end msg to master!\n");
         exit(EXIT_FAILURE);
       }
     } else {
-      direction = rand() % 2;
+
       if (direction == 1) { // Right
         if (player_setup.id == player_setup.num_players - 1) {
           printf("Sending potato to %d\n", 0);
@@ -279,10 +280,9 @@ int main(int argc, char *argv[]) {
         }
 
         sendStatus = send(connected_listen_fd, &potato, sizeof(potato), 0);
-        sleep(1);
+        // sleep(1);
         if (sendStatus == -1) {
           printf("Can not send potato ro left!\n");
-          ;
           exit(EXIT_FAILURE);
         }
       }

@@ -157,7 +157,6 @@ int main(int argc, char *argv[]) {
   /**If num_hops is initially 0, tell players to shutdown and then shutdown*/
   if (num_hops == 0) {
     shutdown_msg.hops_to_go = -1;
-    strcpy(shutdown_msg.trace, "shutdown");
 
     for (int i = 0; i < num_players; i++) {
       ssize_t sendStatus = send(players[i].connected_socket_on_master,
@@ -179,6 +178,7 @@ int main(int argc, char *argv[]) {
   potato potato;
   potato.num_hops = num_hops;
   potato.hops_to_go = num_hops;
+  potato.count = 0;
   // printf("Start the game, potato num hops: %d, hops to go :
   // %d\n",potato.num_hops, potato.hops_to_go);
   printf("Ready to start the game, sending potato to player %d\n",
@@ -211,14 +211,15 @@ int main(int argc, char *argv[]) {
         if (FD_ISSET(players[i].connected_socket_on_master, &player_fd_set)) {
           // printf("Coming from player # %d\n", i);
           ssize_t recvStatus = recv(players[i].connected_socket_on_master,
-                                    potato.trace, sizeof(potato.trace), 0);
+                                    &potato, sizeof(potato), 0);
+          // printf("wwwww\n");
           // printf("Potato trace: %ss\n", potato.trace);
           // printf("trace len: %lu\n", strlen(potato.trace));
           if (recvStatus == -1) {
             printf("Error: Could not recv final potato from player # %d\n", i);
             exit(EXIT_FAILURE);
           }
-          if (strlen(potato.trace) - 1 == num_hops) {
+          if (potato.count == num_hops) {
             // printf("Potato trace: %s\n", potato.trace);
             flag = 1;
           }
@@ -232,16 +233,16 @@ int main(int argc, char *argv[]) {
   printf("Trace of potato:\n");
   for (int i = 0; i < num_hops; i++) {
     if (i == num_hops - 1) {
-      printf("%c\n", potato.trace[i]);
+      printf("%d\n", potato.trace[i]);
     } else {
-      printf("%c,", potato.trace[i]);
+      printf("%d,", potato.trace[i]);
     }
   }
 
   /************************Game End. Shutdown
    * Gracefully***********************/
   shutdown_msg.hops_to_go = -2;
-  strcpy(shutdown_msg.trace, "shutdown");
+  // strcpy(shutdown_msg.trace, "shutdown");
 
   for (int i = 0; i < num_players; i++) {
     ssize_t sendStatus = send(players[i].connected_socket_on_master,

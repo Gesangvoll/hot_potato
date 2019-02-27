@@ -13,7 +13,8 @@
 typedef struct potato_t {
   int num_hops;
   int hops_to_go;
-  char trace[MAX_HOPS];
+  int count;
+  int trace[MAX_HOPS];
 } potato;
 
 typedef struct player_t {
